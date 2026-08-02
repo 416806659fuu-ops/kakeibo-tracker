@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>家庭记账</title>
+<meta name="theme-color" content="#1c8c64">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="家庭记账">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sticky-top">
+  <header class="page-header">
+    <h1 id="page-title">记一笔</h1>
+  </header>
+  <div class="save-bar" id="sync-bar">
+    <span id="sync-status"></span>
+    <button id="sync-btn">同步</button>
+  </div>
+</div>
+
+<div id="app-loading" class="app-loading">加载中…</div>
+
+<main id="app-root" style="display:none;">
+
+  <!-- 记一笔 -->
+  <section class="view active" data-view="expense">
+    <h2 class="section-title" id="expense-form-title">记一笔</h2>
+    <form id="expense-form">
+      <div class="form-row">
+        <label>日期</label>
+        <input type="date" id="expense-date">
+      </div>
+      <div class="form-row">
+        <label>供应商</label>
+        <input type="text" id="expense-vendor" placeholder="比如 成城石井" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <label>项目说明</label>
+        <input type="text" id="expense-description" placeholder="比如 咖啡、水" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <label>金额</label>
+        <input type="text" id="expense-amount" inputmode="decimal" placeholder="支持算式，比如 1200+300">
+      </div>
+      <div class="form-row">
+        <label>支付方式（可多选）</label>
+        <div class="chip-wrap" id="expense-payment-chips"></div>
+        <div class="chip-add-row">
+          <input type="text" id="expense-payment-new" placeholder="没有想要的？打字新增" autocomplete="off">
+          <button type="button" id="expense-payment-add-btn">+</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>记账人</label>
+        <div class="split-switch" id="expense-person-switch">
+          <button type="button" data-person="FUU">FUU</button>
+          <button type="button" data-person="MORI">MORI</button>
+        </div>
+      </div>
+      <button type="submit" class="pill wide primary" id="expense-submit-btn">记这一笔</button>
+      <button type="button" class="pill wide" id="expense-cancel-edit-btn" style="display:none;">取消编辑</button>
+      <button type="button" class="pill wide danger" id="expense-delete-btn" style="display:none;">删除这一笔</button>
+    </form>
+  </section>
+
+  <!-- 历史 -->
+  <section class="view" data-view="history">
+    <div class="month-nav">
+      <button id="hist-month-prev">‹</button>
+      <span id="hist-month-label"></span>
+      <button id="hist-month-next">›</button>
+    </div>
+    <div class="filter-row">
+      <div class="split-switch small" id="hist-person-filter">
+        <button data-person="ALL">全部</button>
+        <button data-person="FUU">FUU</button>
+        <button data-person="MORI">MORI</button>
+      </div>
+      <select id="hist-method-filter"></select>
+    </div>
+    <div id="hist-list"></div>
+  </section>
+
+  <!-- 汇总 -->
+  <section class="view" data-view="summary">
+    <div class="month-nav">
+      <button id="sum-month-prev">‹</button>
+      <span id="sum-month-label"></span>
+      <button id="sum-month-next">›</button>
+    </div>
+    <div class="hero-card">
+      <div class="hero-label">本月总支出</div>
+      <div class="hero-value" id="sum-total">¥0</div>
+      <div class="hero-sub">
+        <span>FUU <b id="sum-fuu">¥0</b></span>
+        <span>MORI <b id="sum-mori">¥0</b></span>
+      </div>
+    </div>
+    <div class="settings-section">
+      <h2>固定出費参考</h2>
+      <div id="sum-fixed-costs"></div>
+      <p class="settings-note">固定费用仅供参考，不计入上方合计；金额在设置页里编辑。</p>
+    </div>
+  </section>
+
+  <!-- 设置 -->
+  <section class="view" data-view="settings">
+    <div class="settings-section">
+      <h2>身份</h2>
+      <div class="split-switch" id="settings-identity-switch">
+        <button data-identity="FUU">我是 FUU</button>
+        <button data-identity="MORI">我是 MORI</button>
+      </div>
+      <p class="settings-note">决定这台设备记一笔时默认选中的记账人，可以随时改，不影响已经记好的记录。</p>
+    </div>
+
+    <div class="settings-section">
+      <h2>支付方式</h2>
+      <div class="chip-wrap" id="settings-payment-list"></div>
+      <div class="chip-add-row">
+        <input type="text" id="settings-payment-new" placeholder="新增支付方式" autocomplete="off">
+        <button type="button" id="settings-payment-add-btn">+</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>固定出費参考</h2>
+      <div id="settings-fixed-costs"></div>
+      <p class="settings-note">房租、通信费这类每月金额差不多的固定开销，放这里做参考，不会计入记账流水的合计。</p>
+    </div>
+
+    <div class="settings-section">
+      <h2>数据管理</h2>
+      <button class="settings-btn" id="export-btn">导出备份（JSON）</button>
+      <label class="settings-btn" style="display:block;text-align:center;cursor:pointer;">
+        导入备份（JSON）
+        <input type="file" id="import-input" accept="application/json" style="display:none;">
+      </label>
+      <button class="settings-btn danger" id="clear-btn">清空全部记录</button>
+      <p class="settings-note">记录会先存在这台设备的浏览器本地，离线也能照常记账。点顶部的「同步」会把待同步的记录推送到 Google Sheet，也会拉取对方设备新增的记录。</p>
+    </div>
+
+    <div class="settings-section">
+      <h2>后端连接</h2>
+      <button class="settings-btn" id="reset-api-btn">重新设置后端地址/密码</button>
+      <p class="settings-note">首次在新设备/新浏览器打开时会自动问一次后端地址和密码；如果输错了或者以后换了新的 Apps Script 部署，点这个按钮重新输入。</p>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<nav class="tab-bar">
+  <button data-tab="expense" class="active"><span class="tab-icon">✏️</span>记一笔</button>
+  <button data-tab="history"><span class="tab-icon">📜</span>历史</button>
+  <button data-tab="summary"><span class="tab-icon">📊</span>汇总</button>
+  <button data-tab="settings"><span class="tab-icon">⚙️</span>设置</button>
+</nav>
+
+<script src="app.js"></script>
+<script src="expense.js"></script>
+<script src="history.js"></script>
+<script src="summary.js"></script>
+<script src="settings.js"></script>
+</body>
+</html>
