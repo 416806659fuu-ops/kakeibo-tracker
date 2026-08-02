@@ -187,6 +187,9 @@ async function loadIdbPending() {
 }
 
 // ---- 全新设备第一次打开：等服务器把数据拉下来 ----
+// 一定要设超时——这是本机完全没有缓存时唯一的阻塞路径，网络差/信号弱的时候
+// 如果不设超时，界面会卡在"加载中…"卡死，用户没有任何退路。超时或失败就
+// 放弃等待，直接用空的本机状态把界面渲染出来，之后随时能点"同步"重试。
 async function bootState() {
   try {
     const { url, token } = getApiConfig();
@@ -194,7 +197,10 @@ async function bootState() {
       notConfigured = true;
       throw new Error('not configured');
     }
-    const res = await fetch(`${url}?token=${encodeURIComponent(token)}`);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+    const res = await fetch(`${url}?token=${encodeURIComponent(token)}`, { signal: ctrl.signal });
+    clearTimeout(timer);
     if (!res.ok) throw new Error('bad status');
     const data = await res.json();
     if (data.error) throw new Error(data.error);

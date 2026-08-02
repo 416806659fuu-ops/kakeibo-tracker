@@ -148,19 +148,6 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
 }
 .form-row input::placeholder { color: var(--text-muted); opacity: 1; }
 
-.input-confirm-row { display: flex; gap: 8px; }
-.input-confirm-row input { flex: 1; min-width: 0; }
-.input-confirm-row button {
-  flex: none;
-  border: none;
-  background: var(--accent);
-  color: #fff;
-  border-radius: 10px;
-  width: 42px;
-  font-size: 16px;
-  font-weight: 600;
-}
-
 .preview-line {
   margin: 8px 0 0;
   font-size: 12px;
@@ -242,6 +229,22 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
 }
 .split-switch button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .split-switch.small button { padding: 6px 0; font-size: 12px; }
+
+/* 记账人相关的切换（记一笔的记账人、历史筛选、设置里的身份）都用和历史/汇总
+   里 person-tag、环形图一致的颜色，选中 FUU/MORI/共用 是同一个人就是同一个颜色 */
+#expense-person-switch button[data-person="FUU"].active,
+#hist-person-filter button[data-person="FUU"].active,
+#settings-identity-switch button[data-identity="FUU"].active {
+  background: var(--fuu-color); border-color: var(--fuu-color);
+}
+#expense-person-switch button[data-person="MORI"].active,
+#hist-person-filter button[data-person="MORI"].active,
+#settings-identity-switch button[data-identity="MORI"].active {
+  background: var(--mori-color); border-color: var(--mori-color);
+}
+#expense-person-switch button[data-person="SHARED"].active {
+  background: var(--shared-color); border-color: var(--shared-color);
+}
 
 /* ---- 月份导航 ---- */
 .month-nav {

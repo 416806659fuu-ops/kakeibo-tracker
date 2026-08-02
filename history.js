@@ -201,6 +201,9 @@ function bindSwipeRows() {
         moved = false;
         return;
       }
+      // 先关掉当天明细弹层，再进编辑页——不然记一笔页面其实已经切换到编辑态了，
+      // 只是被这个弹层挡在下面看不见，非要手动点返回才"突然"看到编辑界面。
+      closeDayDetail();
       openExpenseForEdit(id);
     });
   });
