@@ -55,7 +55,7 @@ FUU 和 MORI 两人会各自在自己手机上记账，是真正的多设备并�
 | `date` | string | `YYYY-MM-DD` |
 | `category` | string | 消费项目分类，来自 `settings.categories` 里的某个 `name`，也可以是空字符串（不选） |
 | `vendor` | string | 供应商/商家，可为空；选好 `category` 后表单会弹出该分类下的常用供应商快捷按钮，点一下直接填进这里，也可以手动打字 |
-| `description` | string | 项目说明，可为空 |
+| `description` | string | 项目说明，历史遗留字段——UI 上已经和 `category` 合并成一件事，不再单独有输入框，新记录一律是空字符串；老记录如果这个字段有值，编辑时会自动并进 `vendor` 里 |
 | `amount` | number | 金额，日元，必须 > 0 |
 | `paymentMethods` | string[] | 支付方式，支持多选组合（如 `["JALカード","SMBCカード"]`），也可以是空数组 |
 | `person` | string | `"FUU"` / `"MORI"` / `"SHARED"`（共用，两人共同的支出，显示成中文"共用"，见 `PERSON_LABELS`） |

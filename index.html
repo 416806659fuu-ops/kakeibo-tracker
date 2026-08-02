@@ -55,15 +55,14 @@
       </div>
       <div class="form-row">
         <label>供应商</label>
-        <input type="text" id="expense-vendor" placeholder="比如 成城石井" autocomplete="off">
-      </div>
-      <div class="form-row">
-        <label>项目说明</label>
-        <input type="text" id="expense-description" placeholder="比如 咖啡、水" autocomplete="off">
+        <div class="input-confirm-row">
+          <input type="text" id="expense-vendor" placeholder="选个消费项目/常用供应商，或者直接打字" autocomplete="off">
+          <button type="button" id="expense-vendor-confirm-btn">✓</button>
+        </div>
       </div>
       <div class="form-row">
         <label>金额</label>
-        <input type="text" id="expense-amount" inputmode="decimal" placeholder="支持算式，比如 1200+300">
+        <input type="text" id="expense-amount" inputmode="decimal" placeholder="0">
       </div>
       <div class="form-row">
         <label>支付方式（可多选）</label>
@@ -72,6 +71,7 @@
           <input type="text" id="expense-payment-new" placeholder="没有想要的？打字新增" autocomplete="off">
           <button type="button" id="expense-payment-add-btn">+</button>
         </div>
+        <p class="preview-line" id="expense-payment-preview"></p>
       </div>
       <div class="form-row">
         <label>记账人</label>
@@ -103,7 +103,10 @@
       </div>
       <select id="hist-method-filter"></select>
     </div>
-    <div id="hist-list"></div>
+    <div class="cal-weekdays">
+      <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+    </div>
+    <div class="cal-grid" id="hist-calendar"></div>
   </section>
 
   <!-- 汇总 -->
@@ -122,10 +125,39 @@
         <span>共用 <b id="sum-shared">¥0</b></span>
       </div>
     </div>
+    <div class="chart-card">
+      <h2>消费项目占比</h2>
+      <div class="donut-wrap">
+        <div class="donut" id="sum-category-donut">
+          <div class="donut-center">
+            <span class="donut-total" id="sum-category-donut-total">¥0</span>
+            <span class="donut-total-label">本月合计</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-legend" id="sum-category-legend"></div>
+    </div>
+
+    <div class="chart-card">
+      <h2>记账人占比</h2>
+      <div class="donut-wrap">
+        <div class="donut" id="sum-person-donut">
+          <div class="donut-center">
+            <span class="donut-total" id="sum-person-donut-total">¥0</span>
+            <span class="donut-total-label">本月合计</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-legend" id="sum-person-legend"></div>
+    </div>
+
     <div class="settings-section">
-      <h2>固定出費参考</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h2 style="margin:0;">固定出費参考</h2>
+        <button type="button" class="settings-btn" id="sum-edit-fixed-costs-btn" style="width:auto;margin:0;padding:6px 14px;">编辑</button>
+      </div>
       <div id="sum-fixed-costs"></div>
-      <p class="settings-note">固定费用仅供参考，不计入上方合计；金额在设置页里编辑。</p>
+      <p class="settings-note">固定费用仅供参考，不计入上方合计；点「编辑」去设置页改金额。</p>
     </div>
   </section>
 
@@ -182,6 +214,15 @@
   </section>
 
 </main>
+
+<!-- 当天明细：从历史日历点进某一天弹出，每条记录可以向左滑动删除 -->
+<div id="day-detail" class="detail-overlay" style="display:none;">
+  <div class="detail-header">
+    <button id="day-detail-back" aria-label="返回">‹</button>
+    <h2 id="day-detail-title"></h2>
+  </div>
+  <div class="detail-body" id="day-detail-list"></div>
+</div>
 
 <div class="toast" id="toast"></div>
 
