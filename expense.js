@@ -110,21 +110,21 @@ function onAddCustomCategory() {
   renderQuickVendorChips();
 }
 
-// 把当前供应商栏里填的名字，加进当前类别的常用供应商列表，以后同类别记账一点就填
+// 供应商栏本身就是"打字新增"那个输入框，不再有第二个重复的输入框——打的字
+// 本来就是供应商的真实值（提交时直接读这里），点 + 只是顺手把它加进这个类别的
+// 常用供应商列表，方便以后同类别记账一点就填，不点 + 也完全不影响这一笔的提交。
 function onAddQuickVendor() {
-  const input = document.getElementById('expense-quick-vendor-new');
+  const input = document.getElementById('expense-vendor');
   const name = input.value.trim();
   const cat = currentCategory();
   if (!name || !cat) return;
-  if (!cat.vendors.includes(name)) {
-    const categories = (state.settings.categories || []).map((c) =>
-      c.name === cat.name ? Object.assign({}, c, { vendors: c.vendors.concat([name]) }) : c
-    );
-    saveSettings({ categories });
-  }
-  document.getElementById('expense-vendor').value = name;
-  input.value = '';
+  if (cat.vendors.includes(name)) return;
+  const categories = (state.settings.categories || []).map((c) =>
+    c.name === cat.name ? Object.assign({}, c, { vendors: c.vendors.concat([name]) }) : c
+  );
+  saveSettings({ categories });
   renderQuickVendorChips();
+  showToast(`已加入常用供应商：${name}`);
 }
 
 function renderPaymentChips() {
