@@ -74,31 +74,31 @@ function withTimeout(promise, ms, fallback) {
 }
 
 // 后端是 Google Apps Script + Google Sheet。地址和密码不写死在代码里
-// （这份代码要发布到公开的 GitHub Pages），第一次打开时问一次，
-// 存在这台设备的浏览器本地，以后不用再问。FUU 和 MORI 两台设备
-// 各自问一次、各自存一份，密码需要你们线下同步一次。
+// （这份代码要发布到公开的 GitHub Pages），第一次打开在「设置」页里填一次，
+// 存在这台设备的浏览器本地，以后不用再填。FUU 和 MORI 两台设备各自填一次、
+// 各自存一份，密码需要你们线下同步一次。
+//
+// 这里以前是用 prompt() 弹窗问，但 iOS 上「添加到主屏幕」之后的独立窗口模式
+// （standalone display mode）不支持 window.prompt()——不会报错，就是弹窗完全
+// 不出现，导致 iPhone 上永远填不进后端地址。所以改成设置页里的普通输入框。
 function getApiConfig() {
-  let url = localStorage.getItem('api_url');
-  let token = localStorage.getItem('api_token');
-  if (!url || !token) {
-    url = (prompt('请输入后端地址（Apps Script 部署网址）：', url || '') || '').trim();
-    token = (prompt('请输入密码（token）：', token || '') || '').trim();
-    if (url) localStorage.setItem('api_url', url);
-    if (token) localStorage.setItem('api_token', token);
-  }
-  return { url, token };
+  return {
+    url: (localStorage.getItem('api_url') || '').trim(),
+    token: (localStorage.getItem('api_token') || '').trim(),
+  };
+}
+
+function setApiConfig(url, token) {
+  localStorage.setItem('api_url', url.trim());
+  localStorage.setItem('api_token', token.trim());
 }
 
 // 身份是「这台设备是谁在用」，纯本机偏好，不参与同步——FUU 手机上设成 FUU，
-// MORI 手机上设成 MORI，只用来决定记一笔时默认选中哪个人。
+// MORI 手机上设成 MORI，只用来决定记一笔时默认选中哪个人。同样原因（iOS
+// standalone 模式不支持 prompt()），改成设置页里的按钮选，没选之前先默认 FUU。
 function getIdentity() {
-  let id = localStorage.getItem(IDENTITY_KEY);
-  if (id !== 'FUU' && id !== 'MORI') {
-    id = (prompt('这台设备是 FUU 在用，还是 MORI 在用？（决定默认记账人，之后可在设置里改）', 'FUU') || '').trim().toUpperCase();
-    if (id !== 'FUU' && id !== 'MORI') id = 'FUU';
-    localStorage.setItem(IDENTITY_KEY, id);
-  }
-  return id;
+  const id = localStorage.getItem(IDENTITY_KEY);
+  return id === 'FUU' || id === 'MORI' ? id : 'FUU';
 }
 
 function setIdentity(id) {
@@ -561,11 +561,7 @@ function updateSyncBar() {
     bar.dataset.mode = 'unconfigured';
     status.textContent = '还没连后端，点这里设置';
     status.style.cursor = 'pointer';
-    status.onclick = () => {
-      localStorage.removeItem('api_url');
-      localStorage.removeItem('api_token');
-      location.reload();
-    };
+    status.onclick = () => switchView('settings');
     return;
   }
   status.style.cursor = 'default';

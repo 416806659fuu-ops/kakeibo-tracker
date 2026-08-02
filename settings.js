@@ -34,11 +34,7 @@ function initSettings() {
     saveSettings({ fixedCosts });
   });
 
-  document.getElementById('reset-api-btn').addEventListener('click', () => {
-    localStorage.removeItem('api_url');
-    localStorage.removeItem('api_token');
-    location.reload();
-  });
+  document.getElementById('save-api-btn').addEventListener('click', onSaveApiConfig);
 
   document.getElementById('export-btn').addEventListener('click', exportData);
   document.getElementById('import-input').addEventListener('change', importData);
@@ -67,6 +63,25 @@ function renderSettings() {
       <input type="text" inputmode="decimal" class="fixed-cost-input" data-key="${escapeHtml(key)}" value="${fixedCosts[key] || ''}" placeholder="0">
     </div>
   `).join('');
+
+  // 后端地址/密码只在没有正在打字编辑时回填，避免用户正输入到一半又被重画覆盖掉
+  const urlInput = document.getElementById('settings-api-url');
+  const tokenInput = document.getElementById('settings-api-token');
+  if (document.activeElement !== urlInput) urlInput.value = localStorage.getItem('api_url') || '';
+  if (document.activeElement !== tokenInput) tokenInput.value = localStorage.getItem('api_token') || '';
+}
+
+function onSaveApiConfig() {
+  const url = document.getElementById('settings-api-url').value.trim();
+  const token = document.getElementById('settings-api-token').value.trim();
+  if (!url || !token) {
+    showToast('地址和密码都要填');
+    return;
+  }
+  setApiConfig(url, token);
+  notConfigured = false;
+  showToast('已保存，正在同步…');
+  flushPendingOps().then(refreshFromServer);
 }
 
 function exportData() {

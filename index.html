@@ -168,8 +168,16 @@
 
     <div class="settings-section">
       <h2>后端连接</h2>
-      <button class="settings-btn" id="reset-api-btn">重新设置后端地址/密码</button>
-      <p class="settings-note">首次在新设备/新浏览器打开时会自动问一次后端地址和密码；如果输错了或者以后换了新的 Apps Script 部署，点这个按钮重新输入。</p>
+      <div class="form-row">
+        <label>后端地址（Apps Script 部署网址）</label>
+        <input type="text" id="settings-api-url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <label>密码（token）</label>
+        <input type="text" id="settings-api-token" placeholder="口令" autocomplete="off">
+      </div>
+      <button class="settings-btn" id="save-api-btn">保存并同步</button>
+      <p class="settings-note">首次在新设备/新浏览器打开时这里是空的，填好保存就行；如果输错了或者以后换了新的 Apps Script 部署，回这里改。</p>
     </div>
   </section>
 
