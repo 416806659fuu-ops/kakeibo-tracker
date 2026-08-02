@@ -21,6 +21,16 @@ const DEFAULT_FIXED_COSTS = {
   '娯楽': 0, '電気': 0, '光熱': 0, 'ガス': 0, '水道': 0,
 };
 
+// 消费项目（分类），种子数据是从「MORI家出費記録」参考表实际翻过历史记录数出来的
+// 最常出现的几类，每类下面再配几个最常用的供应商，点一下就填进供应商栏。
+const DEFAULT_CATEGORIES = [
+  { name: '食料品', vendors: ['いなげや', '肉のハナマサ', 'まいばすけっと'] },
+  { name: '咖啡', vendors: ['711', 'ファミマ', 'LAWSON', 'ミニストップ'] },
+  { name: '交通', vendors: ['JR', 'メトロ', 'つくばTX'] },
+  { name: '网购', vendors: ['AMAZON', 'taobao', '京东'] },
+  { name: '外食', vendors: [] },
+];
+
 // ---- IndexedDB 镜像：localStorage 的第二保险 ----
 const IDB_NAME = 'kakeibo-idb';
 const IDB_STORE = 'state';
@@ -95,12 +105,20 @@ function setIdentity(id) {
   localStorage.setItem(IDENTITY_KEY, id);
 }
 
+// 记账人除了 FUU / MORI，还有「共用」——两人共同的支出（比如一起吃饭、共同采购），
+// 内部存的是 SHARED，只是显示成中文，避免把"共用"这种中文字面值到处当 CSS 类名/枚举值传来传去。
+const PERSON_LABELS = { FUU: 'FUU', MORI: 'MORI', SHARED: '共用' };
+function personLabel(p) {
+  return PERSON_LABELS[p] || p;
+}
+
 function defaultState() {
   return {
     records: [],
     settings: {
       paymentMethods: DEFAULT_PAYMENT_METHODS.slice(),
       fixedCosts: Object.assign({}, DEFAULT_FIXED_COSTS),
+      categories: DEFAULT_CATEGORIES.map((c) => ({ name: c.name, vendors: c.vendors.slice() })),
     },
   };
 }
@@ -118,6 +136,9 @@ function mergeIntoDefaults(parsed) {
     settings: Object.assign(d.settings, parsed.settings, {
       paymentMethods: (parsed.settings && parsed.settings.paymentMethods) || d.settings.paymentMethods,
       fixedCosts: Object.assign({}, d.settings.fixedCosts, (parsed.settings || {}).fixedCosts),
+      categories: (parsed.settings && parsed.settings.categories && parsed.settings.categories.length)
+        ? parsed.settings.categories
+        : d.settings.categories,
     }),
   };
 }

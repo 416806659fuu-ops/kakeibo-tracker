@@ -2,6 +2,7 @@
 function blankExpenseFields() {
   return {
     date: todayKey(),
+    category: '',
     vendor: '',
     description: '',
     amount: '',
@@ -18,6 +19,8 @@ function renderExpenseForm() {
   document.getElementById('expense-vendor').value = expenseForm.vendor;
   document.getElementById('expense-description').value = expenseForm.description;
   document.getElementById('expense-amount').value = expenseForm.amount;
+  renderCategoryChips();
+  renderQuickVendorChips();
   renderPaymentChips();
   renderPersonSwitch();
 
@@ -25,6 +28,83 @@ function renderExpenseForm() {
   document.getElementById('expense-submit-btn').textContent = editingExpenseId ? '保存修改' : '记这一笔';
   document.getElementById('expense-delete-btn').style.display = editingExpenseId ? '' : 'none';
   document.getElementById('expense-cancel-edit-btn').style.display = editingExpenseId ? '' : 'none';
+}
+
+// 消费项目是单选：先选类别，再从这个类别常用的供应商里点一个直接填进供应商栏，
+// 供应商栏本身还是自由文本，点快捷项只是省得再打字。
+function renderCategoryChips() {
+  const wrap = document.getElementById('expense-category-chips');
+  wrap.innerHTML = '';
+  (state.settings.categories || []).forEach((cat) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip' + (expenseForm.category === cat.name ? ' active' : '');
+    btn.textContent = cat.name;
+    btn.addEventListener('click', () => {
+      expenseForm.category = expenseForm.category === cat.name ? '' : cat.name;
+      renderCategoryChips();
+      renderQuickVendorChips();
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+function currentCategory() {
+  return (state.settings.categories || []).find((c) => c.name === expenseForm.category);
+}
+
+function renderQuickVendorChips() {
+  const row = document.getElementById('expense-quick-vendor-row');
+  const cat = currentCategory();
+  if (!cat) {
+    row.style.display = 'none';
+    return;
+  }
+  row.style.display = '';
+  const wrap = document.getElementById('expense-quick-vendor-chips');
+  wrap.innerHTML = '';
+  (cat.vendors || []).forEach((v) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip quick-vendor';
+    btn.textContent = v;
+    btn.addEventListener('click', () => {
+      document.getElementById('expense-vendor').value = v;
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+// 打字新增一个消费项目类别（比如"日用品"），马上选中它，之后就一直留在候选里
+function onAddCustomCategory() {
+  const input = document.getElementById('expense-category-new');
+  const name = input.value.trim();
+  if (!name) return;
+  const categories = state.settings.categories || [];
+  if (!categories.some((c) => c.name === name)) {
+    saveSettings({ categories: categories.concat([{ name, vendors: [] }]) });
+  }
+  expenseForm.category = name;
+  input.value = '';
+  renderCategoryChips();
+  renderQuickVendorChips();
+}
+
+// 把当前供应商栏里填的名字，加进当前类别的常用供应商列表，以后同类别记账一点就填
+function onAddQuickVendor() {
+  const input = document.getElementById('expense-quick-vendor-new');
+  const name = input.value.trim();
+  const cat = currentCategory();
+  if (!name || !cat) return;
+  if (!cat.vendors.includes(name)) {
+    const categories = (state.settings.categories || []).map((c) =>
+      c.name === cat.name ? Object.assign({}, c, { vendors: c.vendors.concat([name]) }) : c
+    );
+    saveSettings({ categories });
+  }
+  document.getElementById('expense-vendor').value = name;
+  input.value = '';
+  renderQuickVendorChips();
 }
 
 function renderPaymentChips() {
@@ -78,6 +158,7 @@ function onSubmitExpense(e) {
   }
   const fields = {
     date,
+    category: expenseForm.category,
     vendor,
     description,
     amount,
@@ -93,11 +174,12 @@ function onSubmitExpense(e) {
     showToast('已记录');
   }
 
-  // 日期和记账人多半连续几笔都一样，保留下来，其余清空方便连续记账
+  // 日期、记账人、消费项目多半连续几笔都一样，保留下来，其余清空方便连续记账
   const keepDate = fields.date;
   const keepPerson = fields.person;
+  const keepCategory = fields.category;
   editingExpenseId = null;
-  expenseForm = Object.assign(blankExpenseFields(), { date: keepDate, person: keepPerson });
+  expenseForm = Object.assign(blankExpenseFields(), { date: keepDate, person: keepPerson, category: keepCategory });
   renderExpenseForm();
   if (window.renderHistory) window.renderHistory();
   if (window.renderSummary) window.renderSummary();
@@ -129,6 +211,7 @@ function openExpenseForEdit(id) {
   editingExpenseId = id;
   expenseForm = {
     date: record.date,
+    category: record.category || '',
     vendor: record.vendor,
     description: record.description,
     amount: String(record.amount),
@@ -140,6 +223,8 @@ function openExpenseForEdit(id) {
 
 function initExpenseForm() {
   document.getElementById('expense-form').addEventListener('submit', onSubmitExpense);
+  document.getElementById('expense-category-add-btn').addEventListener('click', onAddCustomCategory);
+  document.getElementById('expense-quick-vendor-add-btn').addEventListener('click', onAddQuickVendor);
   document.getElementById('expense-payment-add-btn').addEventListener('click', onAddCustomPaymentMethod);
   document.getElementById('expense-delete-btn').addEventListener('click', onDeleteFromForm);
   document.getElementById('expense-cancel-edit-btn').addEventListener('click', onCancelEdit);

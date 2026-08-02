@@ -16,13 +16,15 @@ function renderSummary() {
   document.getElementById('sum-month-label').textContent = monthLabel(summaryMonth);
 
   const rows = activeRecords().filter((r) => r.date.slice(0, 7) === summaryMonth);
+  const total = rows.reduce((s, r) => s + Number(r.amount), 0);
   const totalFuu = rows.filter((r) => r.person === 'FUU').reduce((s, r) => s + Number(r.amount), 0);
   const totalMori = rows.filter((r) => r.person === 'MORI').reduce((s, r) => s + Number(r.amount), 0);
-  const total = totalFuu + totalMori;
+  const totalShared = rows.filter((r) => r.person === 'SHARED').reduce((s, r) => s + Number(r.amount), 0);
 
   document.getElementById('sum-total').textContent = `¥${total.toLocaleString()}`;
   document.getElementById('sum-fuu').textContent = `¥${totalFuu.toLocaleString()}`;
   document.getElementById('sum-mori').textContent = `¥${totalMori.toLocaleString()}`;
+  document.getElementById('sum-shared').textContent = `¥${totalShared.toLocaleString()}`;
 
   const fixedCosts = state.settings.fixedCosts || {};
   const fixedWrap = document.getElementById('sum-fixed-costs');

@@ -80,11 +80,12 @@ function renderHistory() {
         </div>
         <div class="expense-row-sub">
           <span class="expense-date">${r.date}</span>
+          ${r.category ? `<span class="expense-tag">${escapeHtml(r.category)}</span>` : ''}
           ${r.description ? `<span class="expense-desc">${escapeHtml(r.description)}</span>` : ''}
           ${(r.paymentMethods || []).map((m) => `<span class="expense-tag">${escapeHtml(m)}</span>`).join('')}
         </div>
       </div>
-      <span class="person-tag person-${r.person}">${r.person}</span>
+      <span class="person-tag person-${r.person}">${personLabel(r.person)}</span>
     </div>
   `).join('');
 }

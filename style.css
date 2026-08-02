@@ -11,6 +11,7 @@
   --accent-wash: rgba(28, 140, 100, 0.10);
   --fuu-color: #2a78d6;
   --mori-color: #c9862b;
+  --shared-color: #7a6fd1;
 
   --good: #006300;
   --critical: #d03b3b;
@@ -32,6 +33,7 @@
     --accent-wash: rgba(47, 179, 127, 0.14);
     --fuu-color: #3987e5;
     --mori-color: #e0a94a;
+    --shared-color: #9b8fe8;
 
     --good: #0ca30c;
     --critical: #ec835a;
@@ -138,6 +140,7 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
   gap: 6px;
 }
 .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip.quick-vendor { font-size: 12px; padding: 5px 12px; color: var(--text-muted); }
 .chip.removable { padding-right: 8px; }
 .payment-remove-btn {
   border: none;
@@ -285,6 +288,7 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
 }
 .person-tag.person-FUU { background: var(--fuu-color); }
 .person-tag.person-MORI { background: var(--mori-color); }
+.person-tag.person-SHARED { background: var(--shared-color); }
 
 .empty-hint {
   background: var(--surface-1);

@@ -38,6 +38,22 @@
         <input type="date" id="expense-date">
       </div>
       <div class="form-row">
+        <label>消费项目</label>
+        <div class="chip-wrap" id="expense-category-chips"></div>
+        <div class="chip-add-row">
+          <input type="text" id="expense-category-new" placeholder="没有想要的？打字新增" autocomplete="off">
+          <button type="button" id="expense-category-add-btn">+</button>
+        </div>
+      </div>
+      <div class="form-row" id="expense-quick-vendor-row" style="display:none;">
+        <label>常用供应商</label>
+        <div class="chip-wrap" id="expense-quick-vendor-chips"></div>
+        <div class="chip-add-row">
+          <input type="text" id="expense-quick-vendor-new" placeholder="把这个供应商加进常用" autocomplete="off">
+          <button type="button" id="expense-quick-vendor-add-btn">+</button>
+        </div>
+      </div>
+      <div class="form-row">
         <label>供应商</label>
         <input type="text" id="expense-vendor" placeholder="比如 成城石井" autocomplete="off">
       </div>
@@ -62,6 +78,7 @@
         <div class="split-switch" id="expense-person-switch">
           <button type="button" data-person="FUU">FUU</button>
           <button type="button" data-person="MORI">MORI</button>
+          <button type="button" data-person="SHARED">共用</button>
         </div>
       </div>
       <button type="submit" class="pill wide primary" id="expense-submit-btn">记这一笔</button>
@@ -82,6 +99,7 @@
         <button data-person="ALL">全部</button>
         <button data-person="FUU">FUU</button>
         <button data-person="MORI">MORI</button>
+        <button data-person="SHARED">共用</button>
       </div>
       <select id="hist-method-filter"></select>
     </div>
@@ -101,6 +119,7 @@
       <div class="hero-sub">
         <span>FUU <b id="sum-fuu">¥0</b></span>
         <span>MORI <b id="sum-mori">¥0</b></span>
+        <span>共用 <b id="sum-shared">¥0</b></span>
       </div>
     </div>
     <div class="settings-section">
