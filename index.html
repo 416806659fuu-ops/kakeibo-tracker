@@ -36,6 +36,10 @@
       <div class="form-row">
         <label>日期</label>
         <input type="date" id="expense-date">
+        <label class="checkbox-row">
+          <input type="checkbox" id="expense-no-specific-day">
+          <span>不指定具体哪天（比如跨好几天的旅行/活动，只计入月度总额，不算在某一天里）</span>
+        </label>
       </div>
       <div class="form-row">
         <label>消费项目</label>
@@ -100,6 +104,11 @@
       <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
     </div>
     <div class="cal-grid" id="hist-calendar"></div>
+
+    <div id="hist-undated-section" style="display:none;">
+      <h2 class="section-title" style="margin-top:20px;">不指定日期</h2>
+      <div id="hist-undated-list"></div>
+    </div>
   </section>
 
   <!-- 汇总 -->

@@ -98,8 +98,43 @@ function renderHistory() {
   }
   grid.innerHTML = html;
 
+  renderUndatedList();
+
   // 明细弹层开着的时候（比如刚删完一条），联动重画，数字才跟得上
   if (dayDetailDate) renderDayDetail();
+}
+
+// "不指定具体哪天"的支出（date 只有年月，比如跨好几天的旅行/活动）——不会落进
+// 日历的任何一天格子里，但月度合计已经算进去了（summary.js 那边按 date 前 7 位
+// 匹配月份，"2026-06" 本身前 7 位就是它自己）。这里单独列一份，不然日历上完全
+// 找不到入口去编辑/删除这些记录。
+function renderUndatedList() {
+  const rows = filteredRecords().filter((r) => r.date === historyMonth);
+  const section = document.getElementById('hist-undated-section');
+  if (rows.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+  const list = document.getElementById('hist-undated-list');
+  list.innerHTML = rows.map((r) => `
+    <div class="expense-row" data-id="${r.id}">
+      <div class="expense-row-main">
+        <div class="expense-row-top">
+          <span class="expense-vendor">${escapeHtml(r.vendor || '（未填供应商）')}</span>
+          <span class="expense-amount">¥${Number(r.amount).toLocaleString()}</span>
+        </div>
+        <div class="expense-row-sub">
+          ${r.category ? `<span class="expense-tag">${escapeHtml(r.category)}</span>` : ''}
+          ${(r.paymentMethods || []).map((m) => `<span class="expense-tag">${escapeHtml(m)}</span>`).join('')}
+        </div>
+      </div>
+      <span class="person-tag person-${r.person}">${personLabel(r.person)}</span>
+    </div>
+  `).join('');
+  list.querySelectorAll('.expense-row').forEach((row) => {
+    row.addEventListener('click', () => openExpenseForEdit(row.dataset.id));
+  });
 }
 
 function openDayDetail(dateStr) {

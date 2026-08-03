@@ -14,7 +14,12 @@ let expenseForm = blankExpenseFields();
 let editingExpenseId = null;
 
 function renderExpenseForm() {
-  document.getElementById('expense-date').value = expenseForm.date;
+  // 日期存的是完整 YYYY-MM-DD，或者只有年月的 YYYY-MM（"不指定具体哪天"）——
+  // 后者原生日期选择器没法直接显示，回填的时候先补一个"1号"占位，提交的时候
+  // 复选框还勾着就会再截掉，不影响真正存的值。
+  const noSpecificDay = expenseForm.date.length === 7;
+  document.getElementById('expense-date').value = noSpecificDay ? `${expenseForm.date}-01` : expenseForm.date;
+  document.getElementById('expense-no-specific-day').checked = noSpecificDay;
   document.getElementById('expense-vendor').value = expenseForm.vendor;
   document.getElementById('expense-amount').value = expenseForm.amount;
   renderCategoryChips();
@@ -174,7 +179,8 @@ function onAddCustomPaymentMethod() {
 
 function onSubmitExpense(e) {
   e.preventDefault();
-  const date = document.getElementById('expense-date').value || todayKey();
+  let date = document.getElementById('expense-date').value || todayKey();
+  if (document.getElementById('expense-no-specific-day').checked) date = date.slice(0, 7);
   const vendor = document.getElementById('expense-vendor').value.trim();
   const amount = evalCalExpr(document.getElementById('expense-amount').value);
   if (amount === null || amount <= 0) {
