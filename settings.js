@@ -86,11 +86,40 @@ function renderSettings() {
     </div>
   `).join('');
 
+  renderDiagnostics();
+
   // 后端地址/密码只在没有正在打字编辑时回填，避免用户正输入到一半又被重画覆盖掉
   const urlInput = document.getElementById('settings-api-url');
   const tokenInput = document.getElementById('settings-api-token');
   if (document.activeElement !== urlInput) urlInput.value = localStorage.getItem('api_url') || '';
   if (document.activeElement !== tokenInput) tokenInput.value = localStorage.getItem('api_token') || '';
+}
+
+// 隔着一部手机排查问题太靠猜了：把几个关键的内部状态摊开显示，一张截图就能
+// 判断是"数据根本没同步下来"还是"数据在、但显示逻辑有问题"。
+function renderDiagnostics() {
+  const wrap = document.getElementById('settings-diagnostics');
+  if (!wrap) return;
+  const thisMonth = todayKey().slice(0, 7);
+  const active = activeRecords();
+  const monthRows = active.filter((r) => r.date.slice(0, 7) === thisMonth);
+  const withCat = monthRows.filter((r) => r.category).length;
+  const rows = [
+    ['消费项目（分类）', `${(state.settings.categories || []).length} 个`],
+    ['分类名称', (state.settings.categories || []).map((c) => c.name).join('、') || '（空）'],
+    ['支付方式', `${(state.settings.paymentMethods || []).length} 种`],
+    ['本机记录总数', `${active.length} 条`],
+    [`${thisMonth} 记录`, `${monthRows.length} 条，其中 ${withCat} 条有分类`],
+    ['待同步', `${pendingOps.length} 条`],
+    ['连接状态', notConfigured ? '未配置后端' : (offline ? '离线' : '正常')],
+    ['最近错误', lastSyncError || '（无）'],
+  ];
+  wrap.innerHTML = rows.map(([k, v]) => `
+    <div class="fixed-cost-row">
+      <span class="fixed-cost-label">${escapeHtml(k)}</span>
+      <span class="fixed-cost-value" style="text-align:right;max-width:60%;word-break:break-all;">${escapeHtml(v)}</span>
+    </div>
+  `).join('');
 }
 
 function onSaveApiConfig() {

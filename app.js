@@ -128,6 +128,7 @@ let pendingOps = [];
 let flushing = false;
 let offline = false;
 let notConfigured = false;
+let lastSyncError = ''; // 只给设置页的诊断面板看，方便隔着屏幕排查手机上的问题
 
 function mergeIntoDefaults(parsed) {
   const d = defaultState();
@@ -207,9 +208,11 @@ async function bootState() {
     state = mergeIntoDefaults(data);
     offline = false;
     notConfigured = false;
+    lastSyncError = '';
     cacheLocally();
   } catch (e) {
     offline = true;
+    lastSyncError = `首次加载失败：${e && e.message ? e.message : e}`;
   }
 }
 
@@ -271,11 +274,13 @@ async function refreshFromServer() {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     offline = false;
+    lastSyncError = '';
     mergeServerData(data);
     renderAllViews();
     updateSyncBar();
   } catch (e) {
     offline = true;
+    lastSyncError = `同步失败：${e && e.message ? e.message : e}`;
     updateSyncBar();
   }
 }
@@ -638,6 +643,17 @@ async function boot() {
   const cachedState = loadLocalCache() || (await loadIdbCache());
   const localPending = loadLocalPending();
   pendingOps = localPending.length ? localPending : ((await loadIdbPending()) || []);
+
+  // 从旧版本升上来的设备，队列里可能还压着一条老的整份覆盖式 saveSettings，
+  // 它带着的是这台设备当时那份（很可能已经过时的）完整设置。一旦发出去，就会
+  // 把服务器上别人后来加的分类/支付方式整个盖掉——正是我们刚刚才修掉的那个 bug，
+  // 而且它还会一直卡住"本机有未同步的设置改动"这个判断，导致设置永远不从服务器
+  // 刷新。这种历史遗留操作直接丢弃：设置以服务器那份为准，不会有数据损失。
+  const legacy = pendingOps.filter((o) => o.type === 'saveSettings').length;
+  if (legacy) {
+    pendingOps = pendingOps.filter((o) => o.type !== 'saveSettings');
+    persistPending();
+  }
 
   if (cachedState) {
     state = cachedState;

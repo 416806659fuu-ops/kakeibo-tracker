@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="家庭记账">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -216,9 +216,15 @@
 
     <div class="settings-section">
       <h2>应用版本</h2>
-      <p class="settings-note">当前版本：<b id="settings-app-version">v5</b></p>
+      <p class="settings-note">当前版本：<b id="settings-app-version">v6</b></p>
       <button class="settings-btn" id="force-update-btn">强制更新到最新版</button>
       <p class="settings-note">网页版 app 会把代码存在手机本地好离线使用，偶尔会卡在旧版本、更新不过来。点这个按钮会清掉本地代码缓存并重新下载最新版（记账数据都在服务器上，不会丢）。</p>
+    </div>
+
+    <div class="settings-section">
+      <h2>诊断信息</h2>
+      <div id="settings-diagnostics"></div>
+      <p class="settings-note">出问题时把这一栏截图发出来，就能看出是数据没同步下来、还是显示逻辑的问题。</p>
     </div>
   </section>
 
@@ -245,10 +251,10 @@
 <!-- 这些 ?v= 版本号不是摆设：旧的 service worker 是「缓存优先」，只认完全一样的
      网址，加了版本号就等于换了一个它没见过的网址，只能去服务器拿最新的。
      以后再改动前端、又怀疑手机上没更新的时候，把这个号码 +1 就能强制刷新。 -->
-<script src="app.js?v=5"></script>
-<script src="expense.js?v=5"></script>
-<script src="history.js?v=5"></script>
-<script src="summary.js?v=5"></script>
-<script src="settings.js?v=5"></script>
+<script src="app.js?v=6"></script>
+<script src="expense.js?v=6"></script>
+<script src="history.js?v=6"></script>
+<script src="summary.js?v=6"></script>
+<script src="settings.js?v=6"></script>
 </body>
 </html>
