@@ -184,6 +184,9 @@ let pendingOps = [];
 let flushing = false;
 let offline = false;
 let notConfigured = false;
+// 正在读服务器。这个后端时快时慢，实测同一个请求有时 2 秒、有时 70 秒，
+// 等待期间如果界面上什么都不显示，看起来就像卡住了或者连不上——实际只是在等。
+let fetching = false;
 let lastSyncError = ''; // 只给设置页的诊断面板看，方便隔着屏幕排查手机上的问题
 
 // Apps Script 每次"新建部署"都会给一个全新的 /exec 网址，旧网址不会失效、还会
@@ -266,7 +269,10 @@ async function bootState() {
       notConfigured = true;
       throw new Error('not configured');
     }
-    // 全新设备第一次打开，本机什么都没有，只能等这一次。超时同样放宽到 60 秒。
+    // 全新设备第一次打开，本机什么都没有，只能等这一次。超时同样放宽到 60 秒——
+    // 而干等一分钟只看到"加载中…"太吓人了，把话说明白。
+    const loading = document.getElementById('app-loading');
+    if (loading) loading.textContent = '首次加载中…（要从服务器取全部记录，偶尔要等一分钟）';
     const data = await fetchJsonWithRetry(`${url}?token=${encodeURIComponent(token)}`, { tries: 2, timeout: 60000 });
     checkBackendVersion(data);
     // 连到别的 app 的后端时，它返回的东西按记账的结构一解析就是"零条记录 + 默认设置"。
@@ -335,6 +341,8 @@ async function refreshFromServer() {
   // 以上，一超时就整个失败、退回本地旧缓存——分类于是永远停在旧的，界面上只显示
   // 一句"离线"，根本看不出是分类没更新。设置本身只有几百字节、几乎秒回，所以先拿
   // 它把分类/供应商/支付方式刷新掉，记录慢慢等。
+  fetching = true;
+  updateSyncBar();
   try {
     const s = await fetchJsonWithRetry(`${url}?token=${encodeURIComponent(token)}&only=settings`, { tries: 2, timeout: 15000 });
     if (s && s.settings && Array.isArray(s.settings.paymentMethods)
@@ -356,15 +364,17 @@ async function refreshFromServer() {
     if (backendWrongApp) {
       // 同上：宁可什么都不合并，也不能拿别的 app 的数据把本机记录冲掉
       lastSyncError = '这个后端返回的不是记账数据，请检查后端地址';
-      updateSyncBar();
       return;
     }
     mergeServerData(data);
     renderAllViews();
-    updateSyncBar();
   } catch (e) {
     offline = true;
     lastSyncError = `同步失败：${e && e.message ? e.message : e}`;
+  } finally {
+    // 放 finally 里：上面 backendWrongApp 那条分支会提前 return，
+    // 漏掉这一句的话进度提示就永远停在"连接中"下不来了
+    fetching = false;
     updateSyncBar();
   }
 }
@@ -722,6 +732,13 @@ function updateSyncBar() {
   }
   status.style.cursor = 'default';
   status.onclick = null;
+  // 正在读服务器时明确说出来，并且把"可能要等一会儿"讲清楚。这个后端实测
+  // 偶尔要 70 秒才回，不说的话用户会以为是卡住了/连不上（真发生过）。
+  if (fetching) {
+    bar.dataset.mode = 'syncing';
+    status.textContent = '连接中…（后端偶尔要等一分钟）';
+    return;
+  }
   if (flushing) {
     bar.dataset.mode = 'syncing';
     status.textContent = `同步中…（剩 ${n} 条）`;
