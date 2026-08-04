@@ -66,6 +66,30 @@ function idbGetKey(key) {
     .catch(() => null);
 }
 
+// Google Apps Script 的 /exec 会偶发地返回 404（实测大约五次里会撞上一次，
+// 内容是 Google Drive 的"找不到文件"页面，不是我们的代码出错）。只请求一次的话，
+// 一旦撞上就直接判定成离线、并一直停在"离线 · 使用本机数据"，要用户自己再点同步。
+// 这里重试几次、每次间隔递增，把这种一次性抽风吃掉。
+async function fetchJsonWithRetry(url, { tries = 3, timeout = 12000 } = {}) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), timeout);
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      return data;
+    } catch (e) {
+      lastErr = e;
+      if (i < tries - 1) await new Promise((r) => setTimeout(r, 600 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 function withTimeout(promise, ms, fallback) {
   return Promise.race([
     promise,
@@ -208,13 +232,7 @@ async function bootState() {
       notConfigured = true;
       throw new Error('not configured');
     }
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 12000);
-    const res = await fetch(`${url}?token=${encodeURIComponent(token)}`, { signal: ctrl.signal });
-    clearTimeout(timer);
-    if (!res.ok) throw new Error('bad status');
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
+    const data = await fetchJsonWithRetry(`${url}?token=${encodeURIComponent(token)}`);
     checkBackendVersion(data);
     state = mergeIntoDefaults(data);
     offline = false;
@@ -277,13 +295,7 @@ async function refreshFromServer() {
     return;
   }
   try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
-    const res = await fetch(`${url}?token=${encodeURIComponent(token)}`, { signal: ctrl.signal });
-    clearTimeout(timer);
-    if (!res.ok) throw new Error('bad status');
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
+    const data = await fetchJsonWithRetry(`${url}?token=${encodeURIComponent(token)}`, { tries: 3, timeout: 8000 });
     offline = false;
     lastSyncError = '';
     checkBackendVersion(data);
