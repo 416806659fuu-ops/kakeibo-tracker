@@ -1,15 +1,15 @@
-const CACHE = 'kakeibo-tracker-v11';
-// 这里的 ?v=11 要和 index.html 里 <script>/<link> 上的版本号完全一致——离线时浏览器
+const CACHE = 'kakeibo-tracker-v12';
+// 这里的 ?v=12 要和 index.html 里 <script>/<link> 上的版本号完全一致——离线时浏览器
 // 请求的是带版本号的那个网址，预缓存的键对不上就等于没缓存。改版本号时两边一起改。
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=11',
-  './app.js?v=11',
-  './expense.js?v=11',
-  './history.js?v=11',
-  './summary.js?v=11',
-  './settings.js?v=11',
+  './style.css?v=12',
+  './app.js?v=12',
+  './expense.js?v=12',
+  './history.js?v=12',
+  './summary.js?v=12',
+  './settings.js?v=12',
   './manifest.json',
 ];
 

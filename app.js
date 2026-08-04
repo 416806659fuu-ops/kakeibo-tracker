@@ -266,7 +266,8 @@ async function bootState() {
       notConfigured = true;
       throw new Error('not configured');
     }
-    const data = await fetchJsonWithRetry(`${url}?token=${encodeURIComponent(token)}`);
+    // 全新设备第一次打开，本机什么都没有，只能等这一次。超时同样放宽到 60 秒。
+    const data = await fetchJsonWithRetry(`${url}?token=${encodeURIComponent(token)}`, { tries: 2, timeout: 60000 });
     checkBackendVersion(data);
     // 连到别的 app 的后端时，它返回的东西按记账的结构一解析就是"零条记录 + 默认设置"。
     // 千万不能把这个当成真数据存下来，那等于把本机已有的记账记录全冲掉。
@@ -330,8 +331,25 @@ async function refreshFromServer() {
     updateSyncBar();
     return;
   }
+  // 先单独把设置拉下来。整份数据要读几百行、拼十几万字符，实测慢的时候要 70 秒
+  // 以上，一超时就整个失败、退回本地旧缓存——分类于是永远停在旧的，界面上只显示
+  // 一句"离线"，根本看不出是分类没更新。设置本身只有几百字节、几乎秒回，所以先拿
+  // 它把分类/供应商/支付方式刷新掉，记录慢慢等。
   try {
-    const data = await fetchJsonWithRetry(`${url}?token=${encodeURIComponent(token)}`, { tries: 3, timeout: 8000 });
+    const s = await fetchJsonWithRetry(`${url}?token=${encodeURIComponent(token)}&only=settings`, { tries: 2, timeout: 15000 });
+    if (s && s.settings && Array.isArray(s.settings.paymentMethods)
+        && !pendingOps.some((o) => o.type === 'patchSettings' || o.type === 'saveSettings')) {
+      state.settings = mergeIntoDefaults({ settings: s.settings }).settings;
+      cacheLocally();
+      renderAllViews();
+    }
+  } catch (e) {
+    // 设置没拉到不影响下面拉记录，静默跳过
+  }
+
+  try {
+    // 超时给到 60 秒：实测这个后端偶尔要 28~72 秒才回，8 秒的超时等于必然失败
+    const data = await fetchJsonWithRetry(`${url}?token=${encodeURIComponent(token)}`, { tries: 2, timeout: 60000 });
     offline = false;
     lastSyncError = '';
     checkBackendVersion(data);
