@@ -28,20 +28,33 @@ function categoryBreakdown(rows) {
     const key = r.category || '未分类';
     totals[key] = (totals[key] || 0) + Number(r.amount);
   });
+
+  // "未分类"不是一个真的消费项目，不该跟真分类抢显示名额（它永远是灰的，也不占
+  // 调色板的位子），所以先拎出来，最后再单独接在末尾。
+  const uncategorized = totals['未分类'];
+  delete totals['未分类'];
+
   const entries = Object.keys(totals).map((name) => ({
     label: name,
     value: totals[name],
-    color: name === '未分类' ? 'var(--text-muted)' : categoryColor(name, categories),
+    color: categoryColor(name, categories),
   }));
   entries.sort((a, b) => b.value - a.value);
-  // 饼图切太碎反而看不清楚，超过 6 类就只留前 5，其余折进"其他"
-  if (entries.length > 6) {
-    const head = entries.slice(0, 5);
-    const restTotal = entries.slice(5).reduce((s, e) => s + e.value, 0);
-    head.push({ label: '其他', value: restTotal, color: 'var(--text-muted)' });
-    return head;
+
+  // 上限跟着调色板走：一共 8 个颜色，就最多显示 8 类，真超过了才把尾巴折进"其他"。
+  // 之前这里卡在 6（只留前 5），结果金额小的分类——比如一个月只喝过两次咖啡——
+  // 明明在历史里记着，却整个从饼图上消失了，看起来像是没记上。
+  let result = entries;
+  if (entries.length > 8) {
+    result = entries.slice(0, 7);
+    const restTotal = entries.slice(7).reduce((s, e) => s + e.value, 0);
+    result.push({ label: '其他', value: restTotal, color: 'var(--text-muted)' });
   }
-  return entries;
+
+  if (uncategorized) {
+    result = result.concat([{ label: '未分类', value: uncategorized, color: 'var(--text-muted)' }]);
+  }
+  return result;
 }
 
 function personBreakdown(rows) {
