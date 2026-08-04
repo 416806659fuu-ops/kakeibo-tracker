@@ -1,4 +1,4 @@
-const CACHE = 'kakeibo-tracker-v1';
+const CACHE = 'kakeibo-tracker-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -35,20 +35,19 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(fetch(event.request));
     return;
   }
-  // 静态文件缓存优先 + 后台更新：有缓存立刻响应，同时后台去拿新版本写进缓存，
-  // 下一次打开生效。
+  // 静态文件改成网络优先：这个 app 改动很勤，「缓存优先 + 后台更新」意味着
+  // 每次改完代码，用户手机上要连开两次才会真的用上新版本（第一次还在吃旧缓存，
+  // 只是顺便在背景把新版本存起来）——这正是之前"明明说修好了、手机上还是不行"
+  // 的根源。改成有网就直接用最新的，缓存只在离线时才当兜底。
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
-        .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(event.request, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(event.request)
+      .then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
