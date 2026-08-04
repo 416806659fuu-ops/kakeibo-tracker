@@ -39,6 +39,29 @@ function initSettings() {
   document.getElementById('export-btn').addEventListener('click', exportData);
   document.getElementById('import-input').addEventListener('change', importData);
   document.getElementById('clear-btn').addEventListener('click', clearAllData);
+  document.getElementById('force-update-btn').addEventListener('click', forceUpdate);
+}
+
+// 手机上（尤其是 iOS 加到主屏幕之后）常常一直跑着好几天前的旧代码：service worker
+// 把前端文件存在本地好离线用，而 app 一直挂在后台从来没真正重新加载过，就永远
+// 不会去服务器拿新版本。这个按钮是最后的退路：注销 service worker、清空代码缓存、
+// 再强制重新加载。只动代码缓存，不碰记账数据（数据在服务器上，本地那份下次同步
+// 自然会回来）。
+async function forceUpdate() {
+  showToast('正在更新…');
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    if (window.caches) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch (e) {
+    // 清不掉也照样往下走，加时间戳重新加载本身就能绕开大部分缓存
+  }
+  location.replace(`${location.pathname}?u=${Date.now()}`);
 }
 
 function renderSettings() {

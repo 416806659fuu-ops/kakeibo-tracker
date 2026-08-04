@@ -1,13 +1,15 @@
-const CACHE = 'kakeibo-tracker-v2';
+const CACHE = 'kakeibo-tracker-v3';
+// 这里的 ?v=3 要和 index.html 里 <script>/<link> 上的版本号完全一致——离线时浏览器
+// 请求的是带版本号的那个网址，预缓存的键对不上就等于没缓存。改版本号时两边一起改。
 const ASSETS = [
   './',
   './index.html',
-  './style.css',
-  './app.js',
-  './expense.js',
-  './history.js',
-  './summary.js',
-  './settings.js',
+  './style.css?v=3',
+  './app.js?v=3',
+  './expense.js?v=3',
+  './history.js?v=3',
+  './summary.js?v=3',
+  './settings.js?v=3',
   './manifest.json',
 ];
 
@@ -48,6 +50,8 @@ self.addEventListener('fetch', (event) => {
         }
         return res;
       })
-      .catch(() => caches.match(event.request))
+      // 离线兜底时忽略网址后面的 ?v= / ?u= 之类参数，不然「强制更新」按钮加的
+      // 时间戳会让缓存永远对不上，离线就彻底打不开了。
+      .catch(() => caches.match(event.request, { ignoreSearch: true }))
   );
 });
