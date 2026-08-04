@@ -119,7 +119,11 @@ function renderDiagnostics() {
     ['支付方式', `${(state.settings.paymentMethods || []).length} 种`],
     ['本机记录总数', `${active.length} 条`],
     [`${thisMonth} 记录`, `${monthRows.length} 条，其中 ${withCat} 条有分类`],
-    ['待同步', `${pendingOps.length} 条`],
+    // 光看条数不够：卡住的 patchSettings 会让设置永远不从服务器刷新，
+    // 必须能一眼看出队列里压着的是什么
+    ['待同步', pendingOps.length
+      ? `${pendingOps.length} 条（${[...new Set(pendingOps.map((o) => o.type))].join('、')}）`
+      : '0 条'],
     ['连接状态', notConfigured ? '未配置后端' : (offline ? '离线' : '正常')],
     ['最近错误', lastSyncError || '（无）'],
   ];

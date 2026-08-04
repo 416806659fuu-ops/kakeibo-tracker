@@ -21,7 +21,8 @@ function initSummary() {
 // 没列在这里的分类（用户自己新增的）仍然按列表顺序从 --cat-1..12 里取。
 const CATEGORY_SEMANTIC_COLORS = {
   '食料品': 'var(--cat-food-1)',
-  '咖啡': 'var(--cat-food-2)',
+  '咖啡零食': 'var(--cat-food-2)',
+  '咖啡': 'var(--cat-food-2)', // 改名前的旧值，留着让老记录颜色不变
   '外食': 'var(--cat-food-3)',
   '交通': 'var(--cat-transport)',
   '娱乐': 'var(--cat-fun)',

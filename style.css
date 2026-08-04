@@ -158,6 +158,17 @@ body {
 
 .app-loading { padding: 40px 16px; text-align: center; color: var(--text-muted); font-size: 14px; }
 
+/* 界面初始化失败时的错误条。故意做得显眼——它出现就说明有一整块功能没渲染出来，
+   不该让用户对着空白界面猜。 */
+.init-error {
+  padding: 10px 16px;
+  background: var(--critical);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 main { padding: 16px; max-width: 640px; margin: 0 auto; }
 
 .view { display: none; }

@@ -721,6 +721,21 @@ function updateSyncBar() {
   }
 }
 
+// 某个模块初始化炸了，只写进 console 的话，用户看到的就是"消费项目那一片是空的、
+// 饼图也是灰的"，却完全不知道发生了什么，隔着一部手机根本没法排查——这个坑真的
+// 踩了好几轮。所以出错要直接怼在页面顶部，写清楚是哪个模块、什么错。
+let initErrors = [];
+function reportInitError(label, err) {
+  const msg = err && err.message ? err.message : String(err);
+  console.error(`[${label}] 初始化失败`, err);
+  initErrors.push(`${label}：${msg}`);
+  lastSyncError = `界面初始化失败 → ${initErrors.join('；')}`;
+  const box = document.getElementById('init-error');
+  if (!box) return;
+  box.style.display = '';
+  box.textContent = `⚠️ ${initErrors.join('　/　')}（请把这条发给开发者）`;
+}
+
 async function boot() {
   migrateLegacyApiConfig();
   const cachedState = loadLocalCache() || (await loadIdbCache());
@@ -758,7 +773,7 @@ async function boot() {
     ['设置', window.initSettings],
   ].forEach(([label, init]) => {
     if (!init) return;
-    try { init(); } catch (e) { console.error(`[${label}] 初始化失败`, e); }
+    try { init(); } catch (e) { reportInitError(label, e); }
   });
 
   switchView('expense');
