@@ -15,9 +15,10 @@ function initSummary() {
 
 // 颜色跟着"这个类别是谁"走，不跟着它这个月排第几——同一个类别，不管这个月占比
 // 涨了跌了，颜色永远一样，两张环形图之间/跨月份对比时不会认错。
+const CAT_PALETTE_SIZE = 12; // style.css 里定义到 --cat-12 为止，改这里要连 CSS 一起改
 function categoryColor(name, categories) {
   const idx = categories.findIndex((c) => c.name === name);
-  if (idx === -1 || idx >= 8) return 'var(--text-muted)';
+  if (idx === -1 || idx >= CAT_PALETTE_SIZE) return 'var(--text-muted)';
   return `var(--cat-${idx + 1})`;
 }
 
@@ -41,13 +42,15 @@ function categoryBreakdown(rows) {
   }));
   entries.sort((a, b) => b.value - a.value);
 
-  // 上限跟着调色板走：一共 8 个颜色，就最多显示 8 类，真超过了才把尾巴折进"其他"。
-  // 之前这里卡在 6（只留前 5），结果金额小的分类——比如一个月只喝过两次咖啡——
-  // 明明在历史里记着，却整个从饼图上消失了，看起来像是没记上。
+  // 上限 20：宁可切得碎，也不要让记过的分类凭空消失——之前上限卡得太死（只留
+  // 前 5），咖啡这种金额小的分类在历史里明明记着、饼图上却没有，看起来像没记上。
+  // 注意超过 12 类之后颜色就不够分了（调色板到 --cat-12 为止，再往后一律灰色），
+  // 那时候真正能区分身份的是图例上的文字，不是颜色。
+  const MAX_SLICES = 20;
   let result = entries;
-  if (entries.length > 8) {
-    result = entries.slice(0, 7);
-    const restTotal = entries.slice(7).reduce((s, e) => s + e.value, 0);
+  if (entries.length > MAX_SLICES) {
+    result = entries.slice(0, MAX_SLICES - 1);
+    const restTotal = entries.slice(MAX_SLICES - 1).reduce((s, e) => s + e.value, 0);
     result.push({ label: '其他', value: restTotal, color: 'var(--text-muted)' });
   }
 

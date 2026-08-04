@@ -107,7 +107,7 @@ function onAddCustomCategory() {
   if (!name) return;
   const categories = state.settings.categories || [];
   if (!categories.some((c) => c.name === name)) {
-    saveSettings({ categories: categories.concat([{ name, vendors: [] }]) });
+    patchSettings([{ type: 'addCategory', name }]);
   }
   expenseForm.category = name;
   input.value = '';
@@ -124,10 +124,7 @@ function onAddQuickVendor() {
   const cat = currentCategory();
   if (!name || !cat) return;
   if (cat.vendors.includes(name)) return;
-  const categories = (state.settings.categories || []).map((c) =>
-    c.name === cat.name ? Object.assign({}, c, { vendors: c.vendors.concat([name]) }) : c
-  );
-  saveSettings({ categories });
+  patchSettings([{ type: 'addVendor', category: cat.name, vendor: name }]);
   renderQuickVendorChips();
   showToast(`已加入常用供应商：${name}`);
 }
@@ -169,8 +166,7 @@ function onAddCustomPaymentMethod() {
   const name = input.value.trim();
   if (!name) return;
   if (!state.settings.paymentMethods.includes(name)) {
-    const methods = state.settings.paymentMethods.concat([name]);
-    saveSettings({ paymentMethods: methods });
+    patchSettings([{ type: 'addPaymentMethod', name }]);
   }
   if (!expenseForm.paymentMethods.includes(name)) expenseForm.paymentMethods.push(name);
   input.value = '';

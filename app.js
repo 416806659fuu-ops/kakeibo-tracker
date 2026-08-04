@@ -245,7 +245,12 @@ function mergeServerData(server) {
   });
 
   state.records = Array.from(merged.values());
-  if (server.settings) state.settings = mergeIntoDefaults({ settings: server.settings }).settings;
+  // 设置同理：本机还有没发出去的设置改动时，服务器那份必然更旧，先别采纳，
+  // 等队列发完（patchSettings 成功后会拿服务端合并好的结果回填）
+  const settingsPending = pendingOps.some((o) => o.type === 'patchSettings' || o.type === 'saveSettings');
+  if (server.settings && !settingsPending) {
+    state.settings = mergeIntoDefaults({ settings: server.settings }).settings;
+  }
   cacheLocally();
 }
 
@@ -365,6 +370,17 @@ async function sendOp(op) {
       if (data.error) return false;
       return true;
     }
+    if (op.type === 'patchSettings') {
+      const res = await fetch(url, { method: 'POST', body: JSON.stringify({ token, action: 'patchSettings', ops: op.ops }) });
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (data.error || !data.settings) return false;
+      // 服务端套用完这批操作后的结果才是准的（可能还含着对方设备刚加的东西），
+      // 直接采纳，本机这份乐观更新的就不要了
+      state.settings = mergeIntoDefaults({ settings: data.settings }).settings;
+      cacheLocally();
+      return true;
+    }
   } catch (e) {
     return false;
   }
@@ -423,11 +439,40 @@ function deleteExpenseRecord(id) {
   queueDelete(id);
 }
 
-function saveSettings(fields) {
-  state.settings = Object.assign({}, state.settings, fields);
+// 设置的改动走"上传我做了什么"，不是"上传我认为完整的设置长什么样"。
+// 之前是后者，出过真事故：在一台设置还是旧版的设备上新增一个消费项目，一保存
+// 就把另一台设备上早先新增的"娱乐"整个覆盖没了。现在每个增删改都是一条独立的
+// 操作，服务端在锁里依次套用到它自己那份最新的设置上，两边各自加的都保得住，
+// 删除也依然是真删除。
+function applySettingsOps(settings, ops) {
+  ops.forEach((op) => {
+    if (op.type === 'addPaymentMethod') {
+      if (!settings.paymentMethods.includes(op.name)) settings.paymentMethods = settings.paymentMethods.concat([op.name]);
+    } else if (op.type === 'removePaymentMethod') {
+      settings.paymentMethods = settings.paymentMethods.filter((m) => m !== op.name);
+    } else if (op.type === 'addCategory') {
+      if (!settings.categories.some((c) => c.name === op.name)) {
+        settings.categories = settings.categories.concat([{ name: op.name, vendors: [] }]);
+      }
+    } else if (op.type === 'removeCategory') {
+      settings.categories = settings.categories.filter((c) => c.name !== op.name);
+    } else if (op.type === 'addVendor') {
+      settings.categories = settings.categories.map((c) => (
+        c.name === op.category && !(c.vendors || []).includes(op.vendor)
+          ? Object.assign({}, c, { vendors: (c.vendors || []).concat([op.vendor]) })
+          : c
+      ));
+    } else if (op.type === 'setFixedCost') {
+      settings.fixedCosts = Object.assign({}, settings.fixedCosts, { [op.key]: Number(op.value) || 0 });
+    }
+  });
+  return settings;
+}
+
+function patchSettings(ops) {
+  applySettingsOps(state.settings, ops);
   cacheLocally();
-  pendingOps = pendingOps.filter((o) => o.type !== 'saveSettings');
-  pendingOps.push({ opId: uid(), type: 'saveSettings', settings: state.settings });
+  pendingOps.push({ opId: uid(), type: 'patchSettings', ops });
   persistPending();
   updateSyncBar();
 }

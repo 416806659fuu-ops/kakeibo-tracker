@@ -13,7 +13,7 @@ function initSettings() {
     const name = input.value.trim();
     if (!name) return;
     if (state.settings.paymentMethods.includes(name)) { input.value = ''; return; }
-    saveSettings({ paymentMethods: state.settings.paymentMethods.concat([name]) });
+    patchSettings([{ type: 'addPaymentMethod', name }]);
     input.value = '';
     renderSettings();
   });
@@ -22,7 +22,7 @@ function initSettings() {
     const btn = e.target.closest('.payment-remove-btn');
     if (!btn) return;
     const name = btn.dataset.name;
-    saveSettings({ paymentMethods: state.settings.paymentMethods.filter((m) => m !== name) });
+    patchSettings([{ type: 'removePaymentMethod', name }]);
     renderSettings();
   });
 
@@ -30,8 +30,7 @@ function initSettings() {
     if (!e.target.classList.contains('fixed-cost-input')) return;
     const key = e.target.dataset.key;
     const val = evalCalExpr(e.target.value) || 0;
-    const fixedCosts = Object.assign({}, state.settings.fixedCosts, { [key]: val });
-    saveSettings({ fixedCosts });
+    patchSettings([{ type: 'setFixedCost', key, value: val }]);
   });
 
   document.getElementById('save-api-btn').addEventListener('click', onSaveApiConfig);
