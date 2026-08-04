@@ -15,11 +15,30 @@ function initSummary() {
 
 // 颜色跟着"这个类别是谁"走，不跟着它这个月排第几——同一个类别，不管这个月占比
 // 涨了跌了，颜色永远一样，两张环形图之间/跨月份对比时不会认错。
-const CAT_PALETTE_SIZE = 12; // style.css 里定义到 --cat-12 为止，改这里要连 CSS 一起改
+// 这几个分类的颜色按"它是什么"固定下来，不跟它在列表里排第几走：饮食相关的
+// （食料品/咖啡/外食）统一橙色系，娱乐紫，交通绿。这样比按顺序取色更稳——
+// 删掉中间某个分类时，后面的分类不会集体换颜色。
+// 没列在这里的分类（用户自己新增的）仍然按列表顺序从 --cat-1..12 里取。
+const CATEGORY_SEMANTIC_COLORS = {
+  '食料品': 'var(--cat-food-1)',
+  '咖啡': 'var(--cat-food-2)',
+  '外食': 'var(--cat-food-3)',
+  '交通': 'var(--cat-transport)',
+  '娱乐': 'var(--cat-fun)',
+  '网购': 'var(--cat-shopping)',
+  '日用品': 'var(--cat-daily)',
+};
+
+// 上面 7 个语义色分别占掉了色板的 1/2/3/4/7/11/12 号，剩下这些才是空的。
+// 用户自己新增的分类从这里按顺序取，才不会跟"网购"撞成一模一样的蓝。
+const FREE_CAT_SLOTS = [5, 6, 8, 9, 10];
+
 function categoryColor(name, categories) {
-  const idx = categories.findIndex((c) => c.name === name);
-  if (idx === -1 || idx >= CAT_PALETTE_SIZE) return 'var(--text-muted)';
-  return `var(--cat-${idx + 1})`;
+  if (CATEGORY_SEMANTIC_COLORS[name]) return CATEGORY_SEMANTIC_COLORS[name];
+  const rest = categories.filter((c) => !CATEGORY_SEMANTIC_COLORS[c.name]);
+  const idx = rest.findIndex((c) => c.name === name);
+  if (idx === -1 || idx >= FREE_CAT_SLOTS.length) return 'var(--text-muted)';
+  return `var(--cat-${FREE_CAT_SLOTS[idx]})`;
 }
 
 function categoryBreakdown(rows) {
