@@ -130,6 +130,16 @@ let offline = false;
 let notConfigured = false;
 let lastSyncError = ''; // 只给设置页的诊断面板看，方便隔着屏幕排查手机上的问题
 
+// Apps Script 每次"新建部署"都会给一个全新的 /exec 网址，旧网址不会失效、还会
+// 继续跑当时那份老代码。设备上要是存了旧网址，症状极其隐蔽：同一张表、记录条数
+// 一条不差地都能拿到，但老代码不认识的字段（比如 category）会被整个剥掉，分类列表
+// 也拿不到，于是前端退回内置的默认分类——看起来就像"分类怎么都存不上"，实际上
+// 是连错了后端。这个坑真的踩过一次，排查了好几轮，所以直接让 app 自己认出来。
+let backendOutdated = false;
+function checkBackendVersion(data) {
+  backendOutdated = !(data && data.settings && Array.isArray(data.settings.categories));
+}
+
 function mergeIntoDefaults(parsed) {
   const d = defaultState();
   return {
@@ -205,6 +215,7 @@ async function bootState() {
     if (!res.ok) throw new Error('bad status');
     const data = await res.json();
     if (data.error) throw new Error(data.error);
+    checkBackendVersion(data);
     state = mergeIntoDefaults(data);
     offline = false;
     notConfigured = false;
@@ -275,6 +286,7 @@ async function refreshFromServer() {
     if (data.error) throw new Error(data.error);
     offline = false;
     lastSyncError = '';
+    checkBackendVersion(data);
     mergeServerData(data);
     renderAllViews();
     updateSyncBar();
@@ -616,6 +628,15 @@ function updateSyncBar() {
   if (notConfigured) {
     bar.dataset.mode = 'unconfigured';
     status.textContent = '还没连后端，点这里设置';
+    status.style.cursor = 'pointer';
+    status.onclick = () => switchView('settings');
+    return;
+  }
+  // 连错后端比"没连上"更坑：表面一切正常，实际在悄悄丢字段。所以优先级排在
+  // 同步状态前面，直接顶在最显眼的地方，点一下就能去设置页改地址。
+  if (backendOutdated) {
+    bar.dataset.mode = 'unconfigured';
+    status.textContent = '后端是旧版本，点这里更新地址';
     status.style.cursor = 'pointer';
     status.onclick = () => switchView('settings');
     return;

@@ -104,7 +104,13 @@ function renderDiagnostics() {
   const active = activeRecords();
   const monthRows = active.filter((r) => r.date.slice(0, 7) === thisMonth);
   const withCat = monthRows.filter((r) => r.category).length;
+  // 后端地址只显示末尾一小段：足够看出"是不是连到了另一个部署"，又不至于把
+  // 整条网址糊在小屏幕上占满一整屏
+  const apiUrl = localStorage.getItem('api_url') || '';
+  const m = apiUrl.match(/\/s\/([^/]+)\//);
   const rows = [
+    ['后端部署', backendOutdated ? '⚠️ 旧版本，需更新地址' : '正常'],
+    ['后端地址结尾', m ? `…${m[1].slice(-12)}/exec` : '（未设置）'],
     ['消费项目（分类）', `${(state.settings.categories || []).length} 个`],
     ['分类名称', (state.settings.categories || []).map((c) => c.name).join('、') || '（空）'],
     ['支付方式', `${(state.settings.paymentMethods || []).length} 种`],
