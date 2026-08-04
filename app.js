@@ -10,6 +10,16 @@ const CACHE_KEY = 'kakeibo-cache-v1';
 const PENDING_KEY = 'kakeibo-pending-ops-v1';
 const IDENTITY_KEY = 'kakeibo-identity';
 
+// 后端地址/密码的存储键一定要带 kakeibo- 前缀。三个 app（摄入管理、重训、记账）
+// 都发布在 416806659fuu-ops.github.io 这同一个域名下，只是路径不同，而浏览器的
+// localStorage 是按**域名**隔离的、不看路径——三个 app 共用一份存储。原来它们
+// 都用裸的 'api_url'/'api_token'，于是谁后打开谁就把别人的后端地址覆盖掉，表现
+// 就是"在新设备上打开记账，后端却默认连到了摄入管理"。
+const API_URL_KEY = 'kakeibo-api-url';
+const API_TOKEN_KEY = 'kakeibo-api-token';
+const LEGACY_API_URL_KEY = 'api_url';
+const LEGACY_API_TOKEN_KEY = 'api_token';
+
 // 和 backend-gas/Code.gs 里的 DEFAULT_PAYMENT_METHODS / DEFAULT_FIXED_COSTS 保持一致，
 // 只是给「还没连上后端」时的本机初次体验用一份种子数据，真正的准数据以服务器为准。
 const DEFAULT_PAYMENT_METHODS = [
@@ -107,14 +117,36 @@ function withTimeout(promise, ms, fallback) {
 // 不出现，导致 iPhone 上永远填不进后端地址。所以改成设置页里的普通输入框。
 function getApiConfig() {
   return {
-    url: (localStorage.getItem('api_url') || '').trim(),
-    token: (localStorage.getItem('api_token') || '').trim(),
+    url: (localStorage.getItem(API_URL_KEY) || '').trim(),
+    token: (localStorage.getItem(API_TOKEN_KEY) || '').trim(),
   };
 }
 
 function setApiConfig(url, token) {
-  localStorage.setItem('api_url', url.trim());
-  localStorage.setItem('api_token', token.trim());
+  // 只写带前缀的键。绝对不要动那两个裸键——另外两个 app 还在用它们，
+  // 改了会把它们的后端地址搞坏。
+  localStorage.setItem(API_URL_KEY, url.trim());
+  localStorage.setItem(API_TOKEN_KEY, token.trim());
+}
+
+// 从旧版本升上来的设备，配置还存在裸键里，搬一次过来，免得用户重填。
+// 注意搬过来的值有可能本来就是别的 app 的地址（正是这个 bug 的后果），所以
+// 下面 looksLikeKakeiboData() 会在第一次取到数据时验形状，连错了会立刻报出来。
+function migrateLegacyApiConfig() {
+  if (localStorage.getItem(API_URL_KEY)) return;
+  const url = localStorage.getItem(LEGACY_API_URL_KEY);
+  const token = localStorage.getItem(LEGACY_API_TOKEN_KEY);
+  if (!url || !token) return;
+  localStorage.setItem(API_URL_KEY, url);
+  localStorage.setItem(API_TOKEN_KEY, token);
+}
+
+// 记账后端返回 { records: [...], settings: { paymentMethods, fixedCosts, categories } }；
+// 摄入管理那个后端返回的是 { intake, strength, settings }。用 paymentMethods 就能
+// 干净地区分开——连错了 app 的后端时，与其静悄悄显示一片空白，不如直接说清楚。
+function looksLikeKakeiboData(data) {
+  return !!(data && Array.isArray(data.records) && data.settings
+    && Array.isArray(data.settings.paymentMethods));
 }
 
 // 身份是「这台设备是谁在用」，纯本机偏好，不参与同步——FUU 手机上设成 FUU，
@@ -160,8 +192,10 @@ let lastSyncError = ''; // 只给设置页的诊断面板看，方便隔着屏�
 // 也拿不到，于是前端退回内置的默认分类——看起来就像"分类怎么都存不上"，实际上
 // 是连错了后端。这个坑真的踩过一次，排查了好几轮，所以直接让 app 自己认出来。
 let backendOutdated = false;
+let backendWrongApp = false;
 function checkBackendVersion(data) {
-  backendOutdated = !(data && data.settings && Array.isArray(data.settings.categories));
+  backendWrongApp = !looksLikeKakeiboData(data);
+  backendOutdated = !backendWrongApp && !(data.settings && Array.isArray(data.settings.categories));
 }
 
 function mergeIntoDefaults(parsed) {
@@ -234,6 +268,9 @@ async function bootState() {
     }
     const data = await fetchJsonWithRetry(`${url}?token=${encodeURIComponent(token)}`);
     checkBackendVersion(data);
+    // 连到别的 app 的后端时，它返回的东西按记账的结构一解析就是"零条记录 + 默认设置"。
+    // 千万不能把这个当成真数据存下来，那等于把本机已有的记账记录全冲掉。
+    if (backendWrongApp) throw new Error('这个后端返回的不是记账数据');
     state = mergeIntoDefaults(data);
     offline = false;
     notConfigured = false;
@@ -287,8 +324,7 @@ function mergeServerData(server) {
 }
 
 async function refreshFromServer() {
-  const url = localStorage.getItem('api_url');
-  const token = localStorage.getItem('api_token');
+  const { url, token } = getApiConfig();
   if (!url || !token) {
     notConfigured = true;
     updateSyncBar();
@@ -299,6 +335,12 @@ async function refreshFromServer() {
     offline = false;
     lastSyncError = '';
     checkBackendVersion(data);
+    if (backendWrongApp) {
+      // 同上：宁可什么都不合并，也不能拿别的 app 的数据把本机记录冲掉
+      lastSyncError = '这个后端返回的不是记账数据，请检查后端地址';
+      updateSyncBar();
+      return;
+    }
     mergeServerData(data);
     renderAllViews();
     updateSyncBar();
@@ -646,6 +688,13 @@ function updateSyncBar() {
   }
   // 连错后端比"没连上"更坑：表面一切正常，实际在悄悄丢字段。所以优先级排在
   // 同步状态前面，直接顶在最显眼的地方，点一下就能去设置页改地址。
+  if (backendWrongApp) {
+    bar.dataset.mode = 'unconfigured';
+    status.textContent = '连的不是记账的后端，点这里改';
+    status.style.cursor = 'pointer';
+    status.onclick = () => switchView('settings');
+    return;
+  }
   if (backendOutdated) {
     bar.dataset.mode = 'unconfigured';
     status.textContent = '后端是旧版本，点这里更新地址';
@@ -673,6 +722,7 @@ function updateSyncBar() {
 }
 
 async function boot() {
+  migrateLegacyApiConfig();
   const cachedState = loadLocalCache() || (await loadIdbCache());
   const localPending = loadLocalPending();
   pendingOps = localPending.length ? localPending : ((await loadIdbPending()) || []);

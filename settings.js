@@ -91,8 +91,9 @@ function renderSettings() {
   // 后端地址/密码只在没有正在打字编辑时回填，避免用户正输入到一半又被重画覆盖掉
   const urlInput = document.getElementById('settings-api-url');
   const tokenInput = document.getElementById('settings-api-token');
-  if (document.activeElement !== urlInput) urlInput.value = localStorage.getItem('api_url') || '';
-  if (document.activeElement !== tokenInput) tokenInput.value = localStorage.getItem('api_token') || '';
+  const cfg = getApiConfig();
+  if (document.activeElement !== urlInput) urlInput.value = cfg.url;
+  if (document.activeElement !== tokenInput) tokenInput.value = cfg.token;
 }
 
 // 隔着一部手机排查问题太靠猜了：把几个关键的内部状态摊开显示，一张截图就能
@@ -106,10 +107,12 @@ function renderDiagnostics() {
   const withCat = monthRows.filter((r) => r.category).length;
   // 后端地址只显示末尾一小段：足够看出"是不是连到了另一个部署"，又不至于把
   // 整条网址糊在小屏幕上占满一整屏
-  const apiUrl = localStorage.getItem('api_url') || '';
+  const apiUrl = getApiConfig().url;
   const m = apiUrl.match(/\/s\/([^/]+)\//);
+  const backendState = backendWrongApp ? '⚠️ 不是记账的后端'
+    : (backendOutdated ? '⚠️ 旧版本，需更新地址' : '正常');
   const rows = [
-    ['后端部署', backendOutdated ? '⚠️ 旧版本，需更新地址' : '正常'],
+    ['后端部署', backendState],
     ['后端地址结尾', m ? `…${m[1].slice(-12)}/exec` : '（未设置）'],
     ['消费项目（分类）', `${(state.settings.categories || []).length} 个`],
     ['分类名称', (state.settings.categories || []).map((c) => c.name).join('、') || '（空）'],
